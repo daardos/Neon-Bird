@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Bird - Mega Explosion</title>
+    <style>
+        @import url('https://fonts.googleapis.com');
+        body {
+            margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center;
+            height: 100vh; font-family: 'Orbitron', sans-serif;
+            background: #050505;
+        }
+        canvas { 
+            border: 3px solid #00f3ff; border-radius: 20px; 
+            background: rgba(0, 0, 0, 0.9); cursor: pointer;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+        }
+        #ui { position: absolute; top: 40px; color: #fff; text-align: center; pointer-events: none; z-index: 10; }
+        .score { font-size: 64px; font-weight: 700; color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div id="score" class="score">0</div>
+        <div id="best" style="color: #00f3ff; opacity: 0.7;">BEST: 0</div>
+    </div>
+    <canvas id="game"></canvas>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+
+        canvas.width = 400; canvas.height = 600;
+
+        let birdY = 300, birdX = 60, velocity = 0, score = 0;
+        let gravity = 0.22, jump = -5.5, pipeSpeed = 2.2;
+        let pipes = [], particles = [], frameCount = -100, currentHue = 190;
+        let isDead = false;
+
+        let highScore = localStorage.getItem('neonBirdBest') || 0;
+        document.getElementById('best').innerText = `BEST: ${highScore}`;
+
+        class Particle {
+            constructor(x, y, color, speedMult) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 4 + 1;
+                // Радиальный разлет (во все стороны)
+                const angle = Math.random() * Math.PI * 2;
+                const force = Math.random() * speedMult;
+                this.speedX = Math.cos(angle) * force;
+                this.speedY = Math.sin(angle) * force;
+                this.color = color;
+                this.opacity = 1;
+                this.decay = Math.random() * 0.02 + 0.01;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.opacity -= this.decay;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        function resetGame() {
+            if (score > highScore) { highScore = score; localStorage.setItem('neonBirdBest', highScore); document.getElementById('best').innerText = `BEST: ${highScore}`; }
+            birdY = 300; velocity = 0; pipes = []; score = 0; frameCount = -100;
+            isDead = false;
+            scoreElement.innerText = score;
+        }
+
+        function explode() {
+            isDead = true;
+            // СОЗДАЕМ 150 ЧАСТИЦ ПРИ СМЕРТИ
+            for (let i = 0; i < 150; i++) {
+                particles.push(new Particle(birdX + 15, birdY + 15, '#ff00ff', 8));
+            }
+            // Мгновенный рестарт через короткую паузу, чтобы увидеть взрыв
+            setTimeout(resetGame, 400);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (!isDead) {
+                velocity += gravity; birdY += velocity;
+                // Пол
+                if (birdY + 30 > canvas.height) { birdY = canvas.height - 30; velocity = 0; }
+                // Потолок
+                if (birdY < 0) explode();
+
+                if (frameCount > 0 && frameCount % 110 === 0) {
+                    const gap = 180, h = Math.random() * (canvas.height - gap - 160) + 80;
+                    pipes.push({ x: canvas.width, y: h, gap: gap, width: 60, passed: false, color: `hsl(${currentHue}, 100%, 50%)` });
+                }
+                frameCount++;
+            }
+
+            pipes.forEach((p, i) => {
+                if (!isDead) p.x -= pipeSpeed;
+                ctx.fillStyle = p.color; ctx.shadowBlur = 15; ctx.shadowColor = p.color;
+                ctx.fillRect(p.x, 0, p.width, p.y); ctx.fillRect(p.x, p.y + p.gap, p.width, canvas.height);
+                
+                if (!isDead && birdX + 25 > p.x && birdX + 5 < p.x + p.width && (birdY + 5 < p.y || birdY + 25 > p.y + p.gap)) explode();
+                
+                if (!isDead && p.x + p.width < birdX && !p.passed) { 
+                    score++; p.passed = true; scoreElement.innerText = score;
+                    if (score % 8 === 0) currentHue = (currentHue + 40) % 360;
+                }
+                if (p.x + p.width < 0) pipes.splice(i, 1);
+            });
+
+            // Отрисовка частиц
+            particles.forEach((p, i) => {
+                p.update(); p.draw();
+                if (p.opacity <= 0) particles.splice(i, 1);
+            });
+
+            // Птица (рисуем только если жив)
+            if (!isDead) {
+                ctx.fillStyle = '#ff00ff'; ctx.shadowBlur = 25; ctx.shadowColor = '#ff00ff';
+                ctx.fillRect(birdX, birdY, 30, 30); ctx.shadowBlur = 0;
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        const handleAction = (e) => {
+            if (isDead) return;
+            velocity = jump;
+            // Искры при прыжке (немного)
+            for(let i=0; i<5; i++) particles.push(new Particle(birdX + 15, birdY + 30, '#ff00ff', 3));
+            if (e && e.code === 'Space') e.preventDefault();
+        };
+
+        window.addEventListener('keydown', (e) => { if(e.code === 'Space') handleAction(e); });
+        window.addEventListener('mousedown', handleAction);
+        window.addEventListener('touchstart', (e) => { handleAction(e); e.preventDefault(); }, {passive: false});
+        window.oncontextmenu = (e) => e.preventDefault();
+
+        draw();
+    </script>
+</body>
+</html>
