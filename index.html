@@ -18,6 +18,32 @@
         }
         #ui { position: absolute; top: 40px; color: #fff; text-align: center; pointer-events: none; z-index: 10; }
         .score { font-size: 64px; font-weight: 700; color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+        
+            @import url('https://googleapis.com');
+    body {
+        margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center;
+        height: 100vh; font-family: 'Orbitron', sans-serif;
+        background: #050505;
+        --is-mobile: 0; /* Флаг для ПК */
+    }
+    canvas { 
+        border: 3px solid #00f3ff; border-radius: 20px; 
+        background: rgba(0, 0, 0, 0.9); cursor: pointer;
+        box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+    }
+    #ui { position: absolute; top: 40px; color: #fff; text-align: center; pointer-events: none; z-index: 10; }
+    .score { font-size: 64px; font-weight: 700; color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+
+    /* ОПТИМИЗАЦИЯ ДЛЯ МОБИЛОК */
+    @media (max-width: 768px) {
+        body { --is-mobile: 1; } /* Включаем режим оптимизации */
+        canvas {
+            width: 90vw;
+            height: auto;
+            box-shadow: none; /* Убираем тяжелую тень канваса */
+        }
+        .score { font-size: 40px; text-shadow: none; }
+    }
     </style>
 </head>
 <body>
@@ -28,6 +54,55 @@
     <canvas id="game"></canvas>
 
     <script>
+
+  const isMobile = getComputedStyle(document.body).getPropertyValue('--is-mobile') === '1';
+
+    // В функции draw() замени строки со свечением на эти условия:
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // ... (твой код движения птицы) ...
+
+        pipes.forEach((p, i) => {
+            if (!isDead) p.x -= pipeSpeed;
+            ctx.fillStyle = p.color; 
+            
+            // ОПТИМИЗАЦИЯ: Включаем тени только если НЕ мобилка
+            if (!isMobile) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = p.color;
+            }
+
+            ctx.fillRect(p.x, 0, p.width, p.y); 
+            ctx.fillRect(p.x, p.y + p.gap, p.width, canvas.height);
+            
+            // Сбрасываем тени, чтобы не тормозили дальше
+            ctx.shadowBlur = 0;
+
+            // ... (твой код столкновений) ...
+        });
+
+        particles.forEach((p, i) => {
+            p.update(); p.draw();
+            if (p.opacity <= 0) particles.splice(i, 1);
+        });
+
+        if (!isDead) {
+            ctx.fillStyle = '#ff00ff'; 
+            
+            // ОПТИМИЗАЦИЯ: Для птицы тоже выключаем на мобилках
+            if (!isMobile) {
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = '#ff00ff';
+            }
+
+            ctx.fillRect(birdX, birdY, 30, 30); 
+            ctx.shadowBlur = 0;
+        }
+
+        requestAnimationFrame(draw);
+    }
+
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
