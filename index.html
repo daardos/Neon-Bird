@@ -35,7 +35,7 @@
         canvas.width = 400; canvas.height = 600;
 
         let birdY = 300, birdX = 60, velocity = 0, score = 0;
-        let gravity = 0.22, jump = -5.5, pipeSpeed = 2.2;
+        let gravity = 0.22, jump = -5.5, pipeSpeed = 4.2;
         let pipes = [], particles = [], frameCount = -100, currentHue = 190;
         let isDead = false;
 
@@ -53,7 +53,7 @@
                 this.speedY = Math.sin(angle) * force;
                 this.color = color;
                 this.opacity = 1;
-                this.decay = Math.random() * 0.02 + 0.01;
+                this.decay = Math.random() * 0.01 + 0.01;
             }
             update() {
                 this.x += this.speedX;
