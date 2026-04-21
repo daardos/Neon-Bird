@@ -35,7 +35,7 @@
         canvas.width = 400; canvas.height = 600;
 
         let birdY = 300, birdX = 60, velocity = 0, score = 0;
-        let gravity = 0.22, jump = -5.5, pipeSpeed = 4.2;
+        let gravity = 0.22, jump = -5.5, pipeSpeed = 2.2;
         let pipes = [], particles = [], frameCount = -100, currentHue = 190;
         let isDead = false;
 
@@ -93,9 +93,7 @@
 
             if (!isDead) {
                 velocity += gravity; birdY += velocity;
-                // Пол
                 if (birdY + 30 > canvas.height) { birdY = canvas.height - 30; velocity = 0; }
-                // Потолок
                 if (birdY < 0) explode();
 
                 if (frameCount > 0 && frameCount % 110 === 0) {
@@ -107,8 +105,11 @@
 
             pipes.forEach((p, i) => {
                 if (!isDead) p.x -= pipeSpeed;
-                ctx.fillStyle = p.color; ctx.shadowBlur = 15; ctx.shadowColor = p.color;
-                ctx.fillRect(p.x, 0, p.width, p.y); ctx.fillRect(p.x, p.y + p.gap, p.width, canvas.height);
+                ctx.fillStyle = p.color; 
+                // ctx.shadowBlur = 15; // ТОРМОЗИТ ТУТ — ОТКЛЮЧИЛИ
+                // ctx.shadowColor = p.color;
+                ctx.fillRect(p.x, 0, p.width, p.y); 
+                ctx.fillRect(p.x, p.y + p.gap, p.width, canvas.height);
                 
                 if (!isDead && birdX + 25 > p.x && birdX + 5 < p.x + p.width && (birdY + 5 < p.y || birdY + 25 > p.y + p.gap)) explode();
                 
@@ -119,20 +120,22 @@
                 if (p.x + p.width < 0) pipes.splice(i, 1);
             });
 
-            // Отрисовка частиц
             particles.forEach((p, i) => {
                 p.update(); p.draw();
                 if (p.opacity <= 0) particles.splice(i, 1);
             });
 
-            // Птица (рисуем только если жив)
             if (!isDead) {
-                ctx.fillStyle = '#ff00ff'; ctx.shadowBlur = 25; ctx.shadowColor = '#ff00ff';
-                ctx.fillRect(birdX, birdY, 30, 30); ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ff00ff'; 
+                // ctx.shadowBlur = 25; // ТОРМОЗИТ ТУТ — ОТКЛЮЧИЛИ
+                // ctx.shadowColor = '#ff00ff';
+                ctx.fillRect(birdX, birdY, 30, 30); 
+                ctx.shadowBlur = 0;
             }
 
             requestAnimationFrame(draw);
         }
+
 
         const handleAction = (e) => {
             if (isDead) return;
